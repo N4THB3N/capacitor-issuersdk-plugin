@@ -1,0 +1,100 @@
+import groovy.json.JsonSlurper
+
+ext {
+    junitVersion = project.hasProperty('junitVersion') ? rootProject.ext.junitVersion : '4.13.2'
+    androidxAppCompatVersion = project.hasProperty('androidxAppCompatVersion') ? rootProject.ext.androidxAppCompatVersion : '1.6.1'
+    androidxJunitVersion = project.hasProperty('androidxJunitVersion') ? rootProject.ext.androidxJunitVersion : '1.1.5'
+    androidxEspressoCoreVersion = project.hasProperty('androidxEspressoCoreVersion') ? rootProject.ext.androidxEspressoCoreVersion : '3.5.1'
+}
+
+def appRepo = file(rootDir).parent
+
+rootProject.allprojects {
+    repositories {
+        maven { url file("$appRepo/node_modules/capacitor-issuersdk-plugin/android/hstmaven/lib")}
+    }
+}
+
+buildscript {
+    ext {
+        kotlin_version = '1.8.21'
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.0.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+android {
+    namespace "br.com.hst.capacitorissuersdk"
+    compileSdkVersion project.hasProperty('compileSdkVersion') ? rootProject.ext.compileSdkVersion : 34
+    defaultConfig {
+        minSdkVersion project.hasProperty('minSdkVersion') ? rootProject.ext.minSdkVersion : 23
+        targetSdkVersion project.hasProperty('targetSdkVersion') ? rootProject.ext.targetSdkVersion : 34
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    lintOptions {
+        abortOnError false
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation project(':capacitor-android')
+
+    def environment = "homolog"
+    try {
+        def pathProject = file(rootProject.projectDir).parentFile
+        def configFile = file("${pathProject}/build.json")
+        def configJson = new JsonSlurper().parseText(configFile.text)
+
+        environment = configJson['hst-plugins-environment'] ?: "homolog"
+    }
+    catch (ignore) {
+        println 'was not abble to load environment to [capacitor-issuersdk-plugin]'
+    }
+
+    if (environment == 'prod') {
+        println 'Setup prod environment...'
+        implementation 'br.com.hst.issuersdk:issuersdk:1.+'
+    } else {
+        println 'Setup homolog environment...'
+        implementation 'br.com.hst.issuersdk-hml:issuersdk:1.+'
+    }
+    implementation 'com.google.code.gson:gson:2.10'
+
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation 'androidx.core:core-ktx:1.8.0'
+    testImplementation "junit:junit:$junitVersion"
+    /* Mockito */
+    testImplementation 'org.mockito:mockito-core:4.0.0'
+    testImplementation 'org.mockito:mockito-inline:4.0.0'
+    testImplementation 'org.mockito.kotlin:mockito-kotlin:4.0.0'
+
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+}

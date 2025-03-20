@@ -1,0 +1,26 @@
+trigger:
+  - master
+
+pool: 'raksdocker'
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: GDT/template-deployments
+
+variables:
+  imageName: 'gtc-app-capacitor-issuersdk-plugin'
+  imageTag: $(Build.BuildId)
+
+stages:
+  - stage: Build
+    condition: always()
+    jobs:
+    - job: Build_Docker
+      steps:
+      - template: docker-build-template.yml@templates
+        parameters:
+          imageName: $(imageName)
+          imageTag: $(imageTag)
+
